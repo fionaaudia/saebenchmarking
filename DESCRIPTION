@@ -15,7 +15,6 @@ Description: Provides model-agnostic difference, ratio, and optimum
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
 URL: https://github.com/fionaaudia/saebenchmarking
 BugReports: https://github.com/fionaaudia/saebenchmarking/issues
 Imports: 
