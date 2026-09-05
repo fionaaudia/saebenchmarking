@@ -1,0 +1,143 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# saebenchmarking
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/fionaaudia/saebenchmarking/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/fionaaudia/saebenchmarking/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+## Overview
+
+saebenchmarking provides model-agnostic **difference**, **ratio**, and
+**optimum** benchmarking for small area estimators, together with mean
+squared error (MSE) estimation, so that weighted small area aggregates
+are consistent with a known external or internal target.
+
+Point estimation methods follow You & Rao (2002), Wang, Fuller & Qu
+(2008), and Rao & Molina (2015, Section 6.4.6). MSE estimation follows
+Butar & Lahiri (2003) and Steorts & Ghosh (2013) for a residual
+bootstrap approach, and Datta, Ghosh, Steorts & Maples (2011) for a
+posterior-simulation approach suited to Hierarchical Bayes estimators.
+
+## Installation
+
+You can install the development version of saebenchmarking from
+[GitHub](https://github.com/) with:
+
+```r
+# install.packages("pak")
+pak::pak("fionaaudia/saebenchmarking")
+```
+
+## Example
+
+### Difference benchmarking
+
+This is a basic example showing how to benchmark small area estimates
+so that their weighted aggregate matches a known external target.
+
+```{r example}
+library(saebenchmarking)
+
+est    <- c(10.2, 8.7, 12.1)
+mse    <- c(0.5, 0.4, 0.6)
+weight <- c(0.3, 0.4, 0.3)
+
+hasil <- sae_benchmarking(
+  method   = "difference",
+  estimate = est,
+  mse      = mse,
+  weight   = weight,
+  target   = 10
+)
+
+hasil$benchmark$estimation
+hasil$aggregation
+```
+
+### Ratio and optimum benchmarking
+
+The same call works with `method = "ratio"` or `method = "optimum"`;
+only the internal adjustment differs.
+
+```{r ratio-optimum}
+sae_benchmarking(
+  method   = "ratio",
+  estimate = est,
+  mse      = mse,
+  weight   = weight,
+  target   = 10
+)$benchmark$estimation
+
+sae_benchmarking(
+  method   = "optimum",
+  estimate = est,
+  mse      = mse,
+  weight   = weight,
+  target   = 10
+)$benchmark$estimation
+```
+
+### Internal benchmarking (no external target)
+
+If you don't have an external target, supply `direct` estimates
+instead and the target is computed internally as their weighted sum.
+
+```{r internal-target}
+direct <- c(10.5, 8.2, 12.8)
+vardir <- c(0.6, 0.5, 0.7)
+
+hasil_internal <- sae_benchmarking(
+  method   = "difference",
+  estimate = est,
+  mse      = mse,
+  weight   = weight,
+  direct   = direct,
+  vardir   = vardir
+)
+
+hasil_internal$benchmark$target
+```
+
+### Estimating the MSE of benchmarked estimates
+
+`mse_benchmarking()` takes the output of `sae_benchmarking()` and
+estimates the MSE of the *benchmarked* estimates. When `direct` and
+`vardir` are available, it uses a residual bootstrap by default:
+
+```{r mse-bootstrap}
+mse_benchmarking(hasil_internal, B = 200, seed = 1)
+```
+
+For Hierarchical Bayes estimators, supply a matrix of posterior draws
+instead, and the posterior-simulation approach is used:
+
+```{r mse-posterior}
+set.seed(1)
+posterior_draws <- matrix(
+  rnorm(300 * 3, rep(est, each = 300), sqrt(mse)),
+  ncol = 3
+)
+
+mse_benchmarking(hasil, posterior_samples = posterior_draws)
+```
+
+## Learn more
+
+See `vignette("pengantar-benchmarking")` for a more detailed
+walkthrough, including guidance on choosing between the three
+benchmarking methods and between the bootstrap and posterior MSE
+approaches.
