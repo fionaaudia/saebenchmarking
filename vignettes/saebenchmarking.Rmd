@@ -1,0 +1,104 @@
+---
+title: "Introduction to saebenchmarking"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to saebenchmarking}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(saebenchmarking)
+```
+
+## Why benchmarking?
+
+Model-based small area estimates, such as the EBLUP under the Fay-Herriot
+model, usually do not add up to the reliable direct estimate of the larger
+area. Benchmarking adjusts them so that
+$\sum_i w_i \hat\theta_i^{B} = \sum_i w_i \hat\theta_i^{DIR}$.
+
+## Data
+
+`data_eblup` contains simulated data for 50 areas with EBLUP estimates;
+`data_hb` contains the same areas with hierarchical Bayes estimates.
+
+```{r}
+head(data_eblup[, c("area", "weight", "direct", "vardir", "eblup", "mse")])
+```
+
+## Point benchmarking
+
+```{r}
+methods <- c("difference", "ratio", "optimum")
+bench <- lapply(methods, function(m) {
+  sae_benchmarking(method = m, direct = "direct", weight = "weight",
+                   estimate = "eblup", mse = "mse", vardir = "vardir",
+                   phi_source = "mse", data = data_eblup)
+})
+names(bench) <- methods
+
+sapply(bench, function(x) x$aggregation[, c("Estimate", "Bench", "Target")])
+```
+
+The difference method shifts every area by the same amount, the ratio method
+scales every area by the same factor, and the optimum method distributes the
+discrepancy according to the MSE (or sampling variance) of each area.
+
+## MSE of benchmarked EBLUPs
+
+```{r}
+Z   <- cbind(1, data_eblup$z)
+s2v <- attr(data_eblup, "sigma2_v")
+
+mse_diff <- mse_benchmarking(bench$difference, estimator = "eblup",
+                             z = Z, sigma2_v = s2v, fitting_method = "REML")
+
+mse_opt <- mse_benchmarking(bench$optimum, estimator = "eblup",
+                            z = Z, sigma2_v = s2v, B = 100, seed = 2026)
+
+comparison <- data.frame(
+  EBLUP      = data_eblup$mse,
+  Difference = mse_diff$mse,
+  Optimum    = mse_opt$mse
+)
+head(round(comparison, 4))
+```
+
+A small number of bootstrap replicates is used here to keep the vignette
+fast; use a larger `B` (for example the default of 1000) in practice.
+
+## Posterior MSE of benchmarked HB estimates
+
+```{r}
+bm_hb <- sae_benchmarking("optimum", direct = "direct", weight = "weight",
+                          estimate = "theta_hb", vardir = "vardir",
+                          phi_source = "vardir", data = data_hb)
+
+mse_hb <- mse_benchmarking(bm_hb, estimator = "hb",
+                           theta_hb = data_hb$theta_hb, V_hb = data_hb$var_hb)
+head(data.frame(V_hb = data_hb$var_hb, PMSE = mse_hb$mse))
+```
+
+## References
+
+Datta, G. S., Ghosh, M., Steorts, R. and Maples, J. (2011). Bayesian
+benchmarking with applications to small area estimation. *TEST*, 20(3),
+574-588.
+
+Rao, J. N. K. and Molina, I. (2015). *Small Area Estimation*, 2nd edition.
+Wiley.
+
+Steorts, R. C. and Ghosh, M. (2013). On estimation of mean squared errors of
+benchmarked empirical Bayes estimators. *Statistica Sinica*, 23(2), 749-767.
+
+Sugasawa, S., Tamae, H. and Kubokawa, T. (2017). Bayesian estimators for
+small area models shrinking both means and variances. *Scandinavian Journal
+of Statistics*, 44(1), 150-167.
+
+Wang, J., Fuller, W. A. and Qu, Y. (2008). Small area estimation under a
+restriction. *Survey Methodology*, 34(1), 29-36.

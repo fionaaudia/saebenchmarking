@@ -2,54 +2,87 @@
 % Please edit documentation in R/mse_benchmarking.R
 \name{mse_benchmarking}
 \alias{mse_benchmarking}
-\title{Estimate the mean squared error of benchmarked small area estimates}
+\title{Estimate the MSE of Benchmarked Small Area Estimates}
 \usage{
-mse_benchmarking(bench_result, posterior_samples = NULL, B = 1000, seed = NULL)
+mse_benchmarking(
+  object,
+  estimator = c("eblup", "hb"),
+  z = NULL,
+  sigma2_v = NULL,
+  fitting_method = c("REML", "PR"),
+  theta_hb = NULL,
+  V_hb = NULL,
+  posterior_draws = NULL,
+  B = 1000,
+  seed = NULL
+)
 }
 \arguments{
-\item{bench_result}{A list returned by \code{\link[=sae_benchmarking]{sae_benchmarking()}}.}
+\item{object}{An object of class \code{"sae_benchmarking"} returned by
+\code{\link[=sae_benchmarking]{sae_benchmarking()}}. \code{vardir} must have been supplied in that call when
+\code{estimator = "eblup"}.}
 
-\item{posterior_samples}{Optional numeric matrix with \code{G} rows
-(posterior draws) and one column per area, containing draws of
-the small area parameter \emph{before} benchmarking. If supplied, the
-posterior-simulation approach is used; otherwise the bootstrap
-approach is used.}
+\item{estimator}{Character. \code{"eblup"} or \code{"hb"}.}
 
-\item{B}{Integer. Number of bootstrap replications. Only used when
-\code{posterior_samples} is \code{NULL}.}
+\item{z}{Design matrix (areas in rows, including the intercept column if
+any) used to fit the Fay-Herriot model. Required when
+\code{estimator = "eblup"}.}
 
-\item{seed}{Optional integer seed for the bootstrap.}
+\item{sigma2_v}{Estimated random effect variance from the original
+Fay-Herriot fit. Required when \code{estimator = "eblup"}.}
+
+\item{fitting_method}{Character. \code{"REML"} or \code{"PR"} (Prasad-Rao moment
+method), matching how \code{sigma2_v} was estimated. Used only for
+\code{method = "difference"} under \code{estimator = "eblup"}.}
+
+\item{theta_hb}{Numeric vector of HB estimates (posterior means) in the
+same order as the areas of \code{object}. Used when \code{estimator = "hb"}.}
+
+\item{V_hb}{Numeric vector of HB posterior variances in the same order as
+the areas of \code{object}. Used when \code{estimator = "hb"}.}
+
+\item{posterior_draws}{Matrix of MCMC draws of the unbenchmarked small
+area means (areas in rows, draws in columns). Used when
+\code{estimator = "hb"} and \code{theta_hb} or \code{V_hb} is not supplied.}
+
+\item{B}{Positive integer. Number of bootstrap replicates, used for the
+ratio and optimum methods under \code{estimator = "eblup"}.}
+
+\item{seed}{Optional integer seed for the bootstrap. The random number
+generator state of the session is restored on exit.}
 }
 \value{
-A list with elements \code{method}, \code{approach} (\code{"bootstrap"} or
-\code{"posterior"}), \code{MSE} (a data frame with one row per area), and
-additional diagnostic elements specific to the approach used.
+A list of class \code{"mse_benchmarking"} with elements:
+\itemize{
+\item \code{method}: the benchmarking method of \code{object}.
+\item \code{estimator}: \code{"eblup"} or \code{"hb"}.
+\item \code{estimate}: named numeric vector of benchmarked estimates.
+\item \code{mse}: named numeric vector of estimated MSEs.
+\item \code{B}: number of bootstrap replicates requested, or \code{NA} when no
+bootstrap was used.
+\item \code{n_failed}: number of discarded bootstrap replicates, or \code{NA} when no
+bootstrap was used.
+}
 }
 \description{
-Estimates the MSE of the benchmarked estimates produced by
-\code{\link[=sae_benchmarking]{sae_benchmarking()}}. Two approaches are available depending on the
-information supplied: a residual bootstrap for model-based
-estimators whose variance parameters are estimated (e.g. EBLUP/EB),
-following Butar & Lahiri (2003) as extended by Steorts & Ghosh
-(2013); or direct simulation from posterior draws for Hierarchical
-Bayes estimators, following the general decomposition of
-Datta, Ghosh, Steorts & Maples (2011) and Bell, Datta & Ghosh
-(2013).
+Computes the mean squared error (MSE) of small area estimates benchmarked
+with \code{\link[=sae_benchmarking]{sae_benchmarking()}}, for the ratio, difference, or optimum method,
+when the original estimates are EBLUPs under the Fay-Herriot model or
+hierarchical Bayes (HB) estimates.
 }
 \examples{
-est <- c(10.2, 8.7, 12.1)
-mse_val <- c(0.5, 0.4, 0.6)
-w <- c(0.3, 0.4, 0.3)
-direct <- c(10.5, 8.2, 12.8)
-vardir <- c(0.6, 0.5, 0.7)
-
-hasil <- sae_benchmarking(method = "difference", estimate = est,
-                        mse = mse_val, weight = w, direct = direct,
-                        vardir = vardir)
-mse_benchmarking(hasil, B = 200, seed = 1)
+# EBLUP, difference benchmarking (closed form)
+bm_diff <- sae_benchmarking(method = "difference", direct = "direct",
+                            weight = "weight", estimate = "eblup",
+                            mse = "mse", vardir = "vardir",
+                            data = data_eblup)
+Z <- cbind(1, data_eblup$z)
+s2v <- attr(data_eblup, "sigma2_v")
+res_diff <- mse_benchmarking(bm_diff, estimator = "eblup", z = Z,
+                             sigma2_v = s2v, fitting_method = "REML")
+head(res_diff$mse)
 
 }
 \seealso{
-\code{\link[=sae_benchmarking]{sae_benchmarking()}} for computing the benchmarked point
-estimates required by this function.
+\code{\link[=sae_benchmarking]{sae_benchmarking()}}
 }

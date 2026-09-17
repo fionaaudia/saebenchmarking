@@ -1,28 +1,39 @@
 Package: saebenchmarking
-Title: Title: Benchmarking for Small Area Estimators
-Version: 0.0.0.9000
-Authors@R: 
-    person("Fiona Audia Nauli", "Sihombing", , "222212612@stis.ac.id", role = c("aut", "cre", "cph"))
-Description: Provides model-agnostic difference, ratio, and optimum
-    benchmarking for small area estimators together with mean squared
-    error estimation, so that small area aggregates are consistent
-    with a known external or internal target. Point estimation methods
-    follow You and Rao (2002) <doi:...>, Wang, Fuller and Qu (2008)
-    <doi:...>, and Rao and Molina (2015, ISBN:...). Mean squared error
-    estimation follows Butar and Lahiri (2003) <doi:...>, Steorts and
-    Ghosh (2013) <doi:...>, and Datta, Ghosh, Steorts and Maples (2011)
-    <doi:...> for Hierarchical Bayes estimators.
+Title: Benchmarking Small Area Estimates and Their Mean Squared Errors
+Version: 0.1.0
+Authors@R: c(
+    person("Fiona Audia Nauli", "Sihombing", , "fionasihombing95@gmail.com",
+           role = c("aut", "cre", "cph")),
+    person("Azka", "Ubaidillah", role = "aut")
+  )
+Maintainer: Fiona Audia Nauli Sihombing <fionasihombing95@gmail.com>
+Description: Adjusts model-based small area estimates so that their weighted
+    aggregate agrees with the weighted aggregate of the direct estimates,
+    using the difference, ratio, and optimum benchmarking methods described
+    in Rao and Molina (2015, ISBN:978-1-118-73578-7) and Wang, Fuller and Qu
+    (2008). The mean squared error (MSE) of the benchmarked empirical best
+    linear unbiased predictor (EBLUP) under the Fay-Herriot model is estimated
+    with the second-order approximation or the parametric bootstrap of Steorts
+    and Ghosh (2013) <doi:10.5705/ss.2012.053>. The posterior MSE of the
+    benchmarked hierarchical Bayes (HB) estimator follows Datta, Ghosh,
+    Steorts and Maples (2011) <doi:10.1007/s11749-010-0218-y>.
 License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
 URL: https://github.com/fionaaudia/saebenchmarking
 BugReports: https://github.com/fionaaudia/saebenchmarking/issues
+Depends: 
+    R (>= 3.5)
 Imports: 
-    stats
-Config/roxygen2/version: 8.1.0
+    sae,
+    stats,
+    withr
 Suggests: 
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
-Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0

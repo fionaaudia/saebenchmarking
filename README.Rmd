@@ -21,21 +21,23 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-saebenchmarking provides model-agnostic **difference**, **ratio**, and
-**optimum** benchmarking for small area estimators, together with mean
-squared error (MSE) estimation, so that weighted small area aggregates
-are consistent with a known external or internal target.
+saebenchmarking provides **difference**, **ratio**, and **optimum**
+benchmarking for small area estimates, so that their weighted aggregate
+agrees with the weighted aggregate of the direct estimates, together with
+mean squared error (MSE) estimation of the benchmarked estimates.
 
-Point estimation methods follow You & Rao (2002), Wang, Fuller & Qu
-(2008), and Rao & Molina (2015, Section 6.4.6). MSE estimation follows
-Butar & Lahiri (2003) and Steorts & Ghosh (2013) for a residual
-bootstrap approach, and Datta, Ghosh, Steorts & Maples (2011) for a
-posterior-simulation approach suited to Hierarchical Bayes estimators.
+* Point benchmarking follows Wang, Fuller and Qu (2008) and Rao and
+  Molina (2015).
+* The MSE of benchmarked EBLUPs under the Fay-Herriot model uses the
+  second-order approximation (difference method) or a parametric bootstrap
+  (ratio and optimum methods), following Steorts and Ghosh (2013).
+* The posterior MSE of benchmarked hierarchical Bayes (HB) estimates follows
+  Datta, Ghosh, Steorts and Maples (2011).
 
 ## Installation
 
 You can install the development version of saebenchmarking from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/fionaaudia/saebenchmarking) with:
 
 ```r
 # install.packages("pak")
@@ -44,100 +46,68 @@ pak::pak("fionaaudia/saebenchmarking")
 
 ## Example
 
-### Difference benchmarking
-
-This is a basic example showing how to benchmark small area estimates
-so that their weighted aggregate matches a known external target.
+The package ships with `data_eblup`, a simulated Fay-Herriot dataset with
+EBLUP estimates for 50 areas.
 
 ```{r example}
 library(saebenchmarking)
 
-est    <- c(10.2, 8.7, 12.1)
-mse    <- c(0.5, 0.4, 0.6)
-weight <- c(0.3, 0.4, 0.3)
-
-hasil <- sae_benchmarking(
+bm <- sae_benchmarking(
   method   = "difference",
-  estimate = est,
-  mse      = mse,
-  weight   = weight,
-  target   = 10
+  direct   = "direct",
+  weight   = "weight",
+  estimate = "eblup",
+  mse      = "mse",
+  vardir   = "vardir",
+  data     = data_eblup
 )
 
-hasil$benchmark$estimation
-hasil$aggregation
+summary(bm)
+head(coef(bm))
 ```
 
 ### Ratio and optimum benchmarking
 
-The same call works with `method = "ratio"` or `method = "optimum"`;
-only the internal adjustment differs.
-
 ```{r ratio-optimum}
-sae_benchmarking(
-  method   = "ratio",
-  estimate = est,
-  mse      = mse,
-  weight   = weight,
-  target   = 10
-)$benchmark$estimation
+bm_ratio <- sae_benchmarking("ratio", direct = "direct", weight = "weight",
+                             estimate = "eblup", vardir = "vardir",
+                             data = data_eblup)
 
-sae_benchmarking(
-  method   = "optimum",
-  estimate = est,
-  mse      = mse,
-  weight   = weight,
-  target   = 10
-)$benchmark$estimation
+bm_opt <- sae_benchmarking("optimum", direct = "direct", weight = "weight",
+                           estimate = "eblup", mse = "mse",
+                           vardir = "vardir", phi_source = "mse",
+                           data = data_eblup)
+
+bm_opt$aggregation
 ```
 
-### Internal benchmarking (no external target)
+### MSE of the benchmarked estimates
 
-If you don't have an external target, supply `direct` estimates
-instead and the target is computed internally as their weighted sum.
+```{r mse}
+Z   <- cbind(1, data_eblup$z)
+s2v <- attr(data_eblup, "sigma2_v")
 
-```{r internal-target}
-direct <- c(10.5, 8.2, 12.8)
-vardir <- c(0.6, 0.5, 0.7)
+mse_diff <- mse_benchmarking(bm, estimator = "eblup", z = Z,
+                             sigma2_v = s2v, fitting_method = "REML")
+head(mse_diff$mse)
 
-hasil_internal <- sae_benchmarking(
-  method   = "difference",
-  estimate = est,
-  mse      = mse,
-  weight   = weight,
-  direct   = direct,
-  vardir   = vardir
-)
-
-hasil_internal$benchmark$target
+mse_ratio <- mse_benchmarking(bm_ratio, estimator = "eblup", z = Z,
+                              sigma2_v = s2v, B = 100, seed = 1)
+head(mse_ratio$mse)
 ```
 
-### Estimating the MSE of benchmarked estimates
+For hierarchical Bayes estimates, supply the posterior means and variances:
 
-`mse_benchmarking()` takes the output of `sae_benchmarking()` and
-estimates the MSE of the *benchmarked* estimates. When `direct` and
-`vardir` are available, it uses a residual bootstrap by default:
+```{r mse-hb}
+bm_hb <- sae_benchmarking("ratio", direct = "direct", weight = "weight",
+                          estimate = "theta_hb", data = data_hb)
 
-```{r mse-bootstrap}
-mse_benchmarking(hasil_internal, B = 200, seed = 1)
-```
-
-For Hierarchical Bayes estimators, supply a matrix of posterior draws
-instead, and the posterior-simulation approach is used:
-
-```{r mse-posterior}
-set.seed(1)
-posterior_draws <- matrix(
-  rnorm(300 * 3, rep(est, each = 300), sqrt(mse)),
-  ncol = 3
-)
-
-mse_benchmarking(hasil, posterior_samples = posterior_draws)
+mse_hb <- mse_benchmarking(bm_hb, estimator = "hb",
+                           theta_hb = data_hb$theta_hb,
+                           V_hb = data_hb$var_hb)
+head(mse_hb$mse)
 ```
 
 ## Learn more
 
-See `vignette("pengantar-benchmarking")` for a more detailed
-walkthrough, including guidance on choosing between the three
-benchmarking methods and between the bootstrap and posterior MSE
-approaches.
+See `vignette("saebenchmarking", package = "saebenchmarking")`.

@@ -7,3 +7,9 @@
 inst/doc
 /doc/
 /Meta/
+.claude
+.rlibtmp
+*.Rcheck
+.Rd2pdf*
+*.tar.gz
+R/.RDataTmp

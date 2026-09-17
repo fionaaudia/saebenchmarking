@@ -5,63 +5,81 @@
 \title{Benchmark small area estimates}
 \usage{
 sae_benchmarking(
-  method = c("difference", "ratio", "optimum"),
-  estimate,
-  mse,
+  method = c("ratio", "difference", "optimum"),
+  direct,
   weight,
-  target = NULL,
-  direct = NULL,
+  estimate,
+  mse = NULL,
   vardir = NULL,
-  area_names = NULL
+  phi_source = c("mse", "vardir"),
+  area_names = NULL,
+  data = NULL
 )
 }
 \arguments{
-\item{method}{Character. One of \code{"difference"}, \code{"ratio"}, or
-\code{"optimum"}.}
+\item{method}{Character. One of \code{"ratio"}, \code{"difference"}, or \code{"optimum"}.}
 
-\item{estimate}{Numeric vector of indirect small area estimates
-(e.g. EBLUP, EB, or HB posterior means), one value per area.}
+\item{direct}{Numeric vector of direct estimates, or the name of a column
+of \code{data}. Used to compute the target \code{sum(weight * direct)}.}
 
-\item{mse}{Numeric vector of mean squared errors corresponding to
-\code{estimate}, one value per area.}
+\item{weight}{Numeric vector of non-negative benchmarking weights (e.g.
+population proportions), or the name of a column of \code{data}. Rescaled to
+sum to one.}
 
-\item{weight}{Numeric vector of benchmarking weights (e.g.
-population proportions), one per area. Automatically normalised
-to sum to 1 with a warning if it does not.}
+\item{estimate}{Numeric vector of model-based small area estimates (e.g.
+EBLUP or HB), or the name of a column of \code{data}.}
 
-\item{target}{Optional single numeric value used as the external
-benchmark target. If \code{NULL}, \code{direct} must be supplied.}
+\item{mse}{Optional numeric vector of mean squared errors of \code{estimate},
+or the name of a column of \code{data}. Required when \code{method = "optimum"}
+and \code{phi_source = "mse"}.}
 
-\item{direct}{Optional numeric vector of direct estimates, used to
-compute an internal target when \code{target} is \code{NULL}.}
+\item{vardir}{Optional numeric vector of sampling variances of \code{direct},
+or the name of a column of \code{data}. Required when \code{method = "optimum"}
+and \code{phi_source = "vardir"}, and by \code{\link[=mse_benchmarking]{mse_benchmarking()}} with
+\code{estimator = "eblup"}.}
 
-\item{vardir}{Optional numeric vector of sampling variances of
-\code{direct}. Only used later by \code{\link[=mse_benchmarking]{mse_benchmarking()}} for bootstrap
-residuals; unused here.}
+\item{phi_source}{Character. One of \code{"mse"} or \code{"vardir"}; the quantity
+used to build the optimum benchmarking factor. Ignored for other methods.}
 
-\item{area_names}{Optional character vector of area labels.}
+\item{area_names}{Optional character vector of area labels. Defaults to
+\code{"Area_1"}, \code{"Area_2"}, and so on.}
+
+\item{data}{Optional data frame. When supplied, \code{direct}, \code{weight},
+\code{estimate}, \code{mse}, and \code{vardir} may be given as column names.}
 }
 \value{
-A list with elements \code{method}, \code{benchmark} (containing
-\code{estimation}, \code{params}, \code{target}, \code{benchmark_type}),
-\code{agregation}, and \code{inputs} (raw inputs retained for
-\code{\link[=mse_benchmarking]{mse_benchmarking()}}).
+This function returns a list of class \code{"sae_benchmarking"} with elements:
+\itemize{
+\item \code{method}: the benchmarking method used.
+\item \code{target}: numeric value of the target.
+\item \code{estimates}: a one-column data frame (\code{Estimate}) of benchmarked
+estimates, with area names as row names.
+\item \code{params}: a list with the adjustment parameter (\code{adjustment}, \code{ratio},
+or \code{lambda}, depending on \code{method}).
+\item \code{aggregation}: a one-row matrix with columns \code{Direct}, \code{Estimate},
+\code{Bench}, and \code{Target} giving the weighted aggregates.
+\item \code{inputs}: a list of the inputs used, retained for \code{\link[=mse_benchmarking]{mse_benchmarking()}}.
+}
 }
 \description{
-Applies difference, ratio, or optimum benchmarking to small area
-estimates so that their weighted aggregate matches a known target,
-following You & Rao (2002), Wang, Fuller & Qu (2008), and
-Rao & Molina (2015, Section 6.4.6).
+Applies difference, ratio, or optimum benchmarking to small area estimates
+so that their weighted aggregate equals the weighted aggregate of the
+direct estimates.
 }
 \examples{
-est <- c(10.2, 8.7, 12.1)
-mse_val <- c(0.5, 0.4, 0.6)
-w <- c(0.3, 0.4, 0.3)
-sae_benchmarking(method = "difference", estimate = est, mse = mse_val,
-              weight = w, target = 10)
+est    <- c(10.2, 8.7, 12.1)
+direct <- c(10.5, 8.2, 12.8)
+mse    <- c(0.5, 0.4, 0.6)
+w      <- c(0.3, 0.4, 0.3)
+
+res <- sae_benchmarking(method = "difference", direct = direct,
+                        weight = w, estimate = est, mse = mse)
+res
+coef(res)
+summary(res)
 
 }
 \seealso{
-\code{\link[=mse_benchmarking]{mse_benchmarking()}} for estimating the mean squared
-error of the benchmarked estimates returned by this function.
+\code{\link[=mse_benchmarking]{mse_benchmarking()}} to estimate the mean squared error of the
+benchmarked estimates.
 }
